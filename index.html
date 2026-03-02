@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Health Checkup System</title>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<style>
+/* Body + Gradient Background */
+body { 
+  font-family: Arial, sans-serif; 
+  background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+  margin:0; padding:0;
+}
+
+/* Header / Banner */
+header { 
+  text-align:center; 
+  padding: 25px; 
+  font-family: 'Pacifico', cursive; 
+  font-size: 2.2em; 
+  background: linear-gradient(90deg,#00bfff,#009acd);
+  color:white; 
+  text-shadow:2px 2px 4px rgba(0,0,0,0.3);
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Container */
+.container { 
+  max-width: 650px; 
+  margin: 30px auto; 
+  padding: 25px; 
+  background: #ffffff; 
+  border-radius: 20px; 
+  box-shadow:0 6px 18px rgba(0,0,0,0.15);
+  transition: transform 0.3s; 
+}
+.container:hover{ transform: translateY(-5px); }
+
+/* Headings */
+h2,h3 { text-align:center; }
+
+/* Inputs + Select */
+input, select, textarea { 
+  width: 100%; 
+  padding: 12px; 
+  margin: 10px 0; 
+  border-radius: 10px; 
+  border:1px solid #ccc; 
+  font-size:1em;
+  transition: 0.3s;
+}
+input:focus, select:focus, textarea:focus { 
+  border: 2px solid #00bfff; 
+  box-shadow:0 0 8px rgba(0,191,255,0.5);
+  outline:none;
+}
+
+/* Buttons */
+button { 
+  width: 100%; 
+  padding: 12px; 
+  margin: 10px 0; 
+  border-radius: 10px; 
+  border:none; 
+  background: #00bfff; 
+  color:white; 
+  font-weight:bold; 
+  font-size:1em; 
+  cursor:pointer; 
+  transition: 0.3s; 
+}
+button:hover { 
+  background:#009acd; 
+  transform: scale(1.05); 
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Hidden */
+.hidden { display:none; }
+
+/* Record Cards */
+.record-card { 
+  border:1px solid #00bfff; 
+  padding:12px; 
+  margin:8px; 
+  border-radius:15px; 
+  background:#f0f8ff; 
+  box-shadow:0 2px 8px rgba(0,0,0,0.1); 
+  animation: popin 0.4s ease forwards;
+}
+
+/* Pop-in animation */
+@keyframes popin { 
+  0% {opacity:0; transform:scale(0.9);} 
+  100% {opacity:1; transform:scale(1);}
+}
+
+/* Language Popup */
+.language-popup { 
+  position:fixed; top:0; left:0; width:100%; height:100%; 
+  background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; 
+  z-index:9999; 
+}
+.language-popup div { 
+  background:white; padding:40px; border-radius:20px; text-align:center; box-shadow:0 6px 18px rgba(0,0,0,0.2);
+}
+.language-popup button { margin:10px; width:45%; }
+</style>
+</head>
+<body>
+
+<header>Online Health Checkup System</header>
+
+<!-- Language Popup -->
+<div class="language-popup" id="langPopup">
+  <div>
+    <h3>Select Language / भाषा छान्नुहोस्</h3>
+    <button onclick="setLang('en')">English</button>
+    <button onclick="setLang('ne')">नेपाली</button>
+  </div>
+</div>
+
+<div class="container" id="loginDiv">
+  <h2 id="loginTitle">Login</h2>
+  <label id="userTypeLabel">User Type:</label>
+  <select id="userType">
+    <option value="patient">Patient</option>
+    <option value="doctor">Doctor</option>
+  </select>
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="loginMsg" style="color:red;"></p>
+</div>
+
+<div class="container hidden" id="patientDiv">
+  <h2 id="patientTitle">Patient Dashboard</h2>
+  <label id="selectDoctorLabel">Select Doctor:</label>
+  <select id="selectDoctor"></select>
+  <label id="appointmentLabel">Appointment Date & Time:</label>
+  <input type="datetime-local" id="appointDate">
+  <label id="diseaseLabel">Enter Disease:</label>
+  <input type="text" id="disease">
+  <button onclick="saveAppointment()" id="setAppBtn">Set Appointment</button>
+  <h3 id="recordsTitle">Your Records</h3>
+  <div id="records"></div>
+  <button onclick="logout()" id="logoutBtn">Logout</button>
+</div>
+
+<div class="container hidden" id="doctorDiv">
+  <h2 id="doctorTitle">Doctor Dashboard</h2>
+  <div id="doctorInfo"></div>
+  <h3 id="patientsTitle">Patients Assigned to You</h3>
+  <div id="allRecords"></div>
+  <h3 id="addPresTitle">Add/Update Prescription</h3>
+  <label id="patientNameLabel">Patient Username:</label>
+  <input type="text" id="patientName">
+  <label id="diseaseInputLabel">Disease:</label>
+  <input type="text" id="diseaseInput">
+  <label id="medicinesLabel">Prescription / Medicines:</label>
+  <textarea id="medicines"></textarea>
+  <label id="precautionsLabel">Precautions / Conclusion:</label>
+  <textarea id="precautions"></textarea>
+  <button onclick="saveDoctorData()" id="saveBtn">Save</button>
+  <button onclick="logout()" id="logoutBtn2">Logout</button>
+</div>
+
+<script>
+// ---------------- Doctors + Recommendations ----------------
+const doctors = [
+  { username: 'dr_sunil', password: '1234', name: 'Dr. Sunil Sharma', capability: 'Cardiologist' },
+  { username: 'dr_rita', password: '5678', name: 'Dr. Rita Koirala', capability: 'Dermatologist' },
+  { username: 'dr_raj', password: 'abcd', name: 'Dr. Raj Thapa', capability: 'General Physician' }
+];
+
+const recommendations = {
+  'Fever': { medicines: 'Paracetamol 500mg, twice a day', precautions: 'Drink warm water, rest, avoid cold food', conclusion: 'Monitor temperature daily' },
+  'Cough': { medicines: 'Cough syrup 10ml, 3 times a day', precautions: 'Avoid cold drinks, keep throat warm', conclusion: 'If persists more than 5 days, consult again' },
+  'Headache': { medicines: 'Painkiller (Ibuprofen 400mg, if needed)', precautions: 'Rest, avoid screen for long time', conclusion: 'Stay hydrated' }
+};
+
+// ---------------- Multilingual Texts ----------------
+const texts = {
+  en: { login:'Login', username:'Username', password:'Password', patientDashboard:'Patient Dashboard', doctorDashboard:'Doctor Dashboard',
+         appointment:'Appointment Date & Time', disease:'Disease', prescription:'Prescription & Advice', precautions:'Precautions & Conclusion',
+         selectDoctor:'Select Doctor', yourRecords:'Your Records', logout:'Logout', setAppointment:'Set Appointment',
+         patientsAssigned:'Patients Assigned to You', addPrescription:'Add/Update Prescription', patientUsername:'Patient Username'},
+  ne: { login:'लगइन', username:'प्रयोगकर्ता नाम', password:'पासवर्ड', patientDashboard:'रोगी ड्यासबोर्ड', doctorDashboard:'डाक्टर ड्यासबोर्ड',
+        appointment:'अपोइन्टमेन्ट मिति र समय', disease:'रोग', prescription:'प्रिस्क्रिप्सन र सल्लाह', precautions:'सावधानी र निष्कर्ष',
+        selectDoctor:'डाक्टर चयन गर्नुहोस्', yourRecords:'तपाईंको रेकर्ड', logout:'लगआउट', setAppointment:'अपोइन्टमेन्ट सेट गर्नुहोस्',
+        patientsAssigned:'तपाईंका रोगी', addPrescription:'प्रिस्क्रिप्सन/सल्लाह थप्नुहोस्', patientUsername:'रोगी नाम'}
+};
+
+// ---------------- Global Variables ----------------
+let currentUser = '';
+let currentDoctor = null;
+let currentLang = 'en';
+
+// ---------------- Language Functions ----------------
+function setLang(lang){
+  currentLang = lang;
+  document.getElementById('langPopup').classList.add('hidden');
+  speakText('login'); // auto pronunciation
+  updateTextUI();
+}
+
+function updateTextUI(){
+  document.getElementById('username').placeholder = texts[currentLang].username;
+  document.getElementById('password').placeholder = texts[currentLang].password;
+  document.getElementById('loginTitle').textContent = texts[currentLang].login;
+  document.getElementById('patientTitle').textContent = texts[currentLang].patientDashboard;
+  document.getElementById('doctorTitle').textContent = texts[currentLang].doctorDashboard;
+  document.getElementById('selectDoctorLabel').textContent = texts[currentLang].selectDoctor;
+  document.getElementById('appointmentLabel').textContent = texts[currentLang].appointment;
+  document.getElementById('diseaseLabel').textContent = texts[currentLang].disease;
+  document.getElementById('setAppBtn').textContent = texts[currentLang].setAppointment;
+  document.getElementById('recordsTitle').textContent = texts[currentLang].yourRecords;
+  document.getElementById('logoutBtn').textContent = texts[currentLang].logout;
+  document.getElementById('patientsTitle').textContent = texts[currentLang].patientsAssigned;
+  document.getElementById('addPresTitle').textContent = texts[currentLang].addPrescription;
+  document.getElementById('patientNameLabel').textContent = texts[currentLang].patientUsername;
+  document.getElementById('medicinesLabel').textContent = texts[currentLang].prescription;
+  document.getElementById('precautionsLabel').textContent = texts[currentLang].precautions;
+}
+
+// Text-to-Speech
+function speakText(key){
+  const utter = new SpeechSynthesisUtterance(texts[currentLang][key]);
+  utter.lang = currentLang==='ne'?'ne-NP':'en-US';
+  window.speechSynthesis.speak(utter);
+}
+
+// ---------------- Login ----------------
+function login() {
+  const type = document.getElementById('userType').value;
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value.trim();
+  const msg = document.getElementById('loginMsg');
+
+  if(type==='doctor'){
+    const doctor = doctors.find(d=>d.username===user && d.password===pass);
+    if(doctor){
+      currentUser = doctor.username;
+      currentDoctor = doctor;
+      document.getElementById('loginDiv').classList.add('hidden');
+      document.getElementById('doctorDiv').classList.remove('hidden');
+      document.getElementById('doctorInfo').innerHTML = `<p>Welcome ${doctor.name} (${doctor.capability})</p>`;
+      showDoctorPatients();
+    } else { msg.textContent = currentLang==='ne'?'डाक्टर क्रेडेन्सियल गलत':'Invalid Doctor Credentials'; }
+  } else {
+    if(!user||!pass){ msg.textContent=currentLang==='ne'?'नाम र पासवर्ड प्रविष्ट गर्नुहोस्':'Enter username & password'; return;}
+    currentUser = user;
+    document.getElementById('loginDiv').classList.add('hidden');
+    document.getElementById('patientDiv').classList.remove('hidden');
+    loadDoctorOptions();
+    loadPatientRecords();
+  }
+}
+
+// ---------------- Logout ----------------
+function logout(){
+  currentUser=''; currentDoctor=null;
+  document.getElementById('loginDiv').classList.remove('hidden');
+  document.getElementById('patientDiv').classList.add('hidden');
+  document.getElementById('doctorDiv').classList.add('hidden');
+  document.getElementById('username').value=''; document.getElementById('password').value='';
+}
+
+// ---------------- Doctor Options for Patient ----------------
+function loadDoctorOptions(){
+  const select = document.getElementById('selectDoctor'); select.innerHTML='';
+  doctors.forEach(d=>{ select.innerHTML+=`<option value="${d.username}">${d.name} (${d.capability})</option>`; });
+}
+
+// ---------------- Appointment Save ----------------
+function saveAppointment(){
+  const date = document.getElementById('appointDate').value;
+  const doctor = document.getElementById('selectDoctor').value;
+  const disease = document.getElementById('disease').value.trim();
+  if(!date||!disease) return alert(currentLang==='ne'?'मिति र रोग प्रविष्ट गर्नुहोस्':'Enter date & disease');
+  let records = JSON.parse(localStorage.getItem('records')||'{}');
+  records[currentUser] = records[currentUser]||{};
+  records[currentUser].appointment=date;
+  records[currentUser].doctor=doctor;
+  records[currentUser].disease=disease;
+  if(recommendations[disease]){
+    records[currentUser].medicines=recommendations[disease].medicines;
+    records[currentUser].precautions=recommendations[disease].precautions+". Conclusion: "+recommendations[disease].conclusion;
+  }
+  localStorage.setItem('records',JSON.stringify(records));
+  alert(currentLang==='ne'?'अपोइन्टमेन्ट सफल':'Appointment saved');
+  loadPatientRecords();
+}
+
+// ---------------- Patient Records ----------------
+function loadPatientRecords(){
+  let records=JSON.parse(localStorage.getItem('records')||'{}');
+  const userData=records[currentUser]||{};
+  const doctorObj = doctors.find(d=>d.username===userData.doctor);
+  const doctorName = doctorObj?doctorObj.name:'Not selected';
+  document.getElementById('records').innerHTML = `
+    <p>${currentLang==='ne'?'डाक्टर':'Doctor'}: ${doctorName}</p>
+    <p>${currentLang==='ne'?'अपोइन्टमेन्ट':'Appointment'}: ${userData.appointment||'Not set'}</p>
+    <p>${currentLang==='ne'?'रोग':'Disease'}: ${userData.disease||'N/A'}</p>
+    <p>${currentLang==='ne'?'प्रिस्क्रिप्सन र सल्लाह':'Prescription & Advice'}: ${userData.medicines||'N/A'}</p>
+    <p>${currentLang==='ne'?'सावधानी र निष्कर्ष':'Precautions & Conclusion'}: ${userData.precautions||'N/A'}</p>
+  `;
+}
+
+// ---------------- Doctor Dashboard Patients ----------------
+function showDoctorPatients(){
+  let records=JSON.parse(localStorage.getItem('records')||'{}');
+  let html='';
+  for(let user in records){
+    if(records[user].doctor===currentDoctor.username){
+      html+=`<div class="record-card">
+        <strong>${user}</strong><br>
+        ${currentLang==='ne'?'अपोइन्टमेन्ट':'Appointment'}: ${records[user].appointment||'Not set'}<br>
+        ${currentLang==='ne'?'रोग':'Disease'}: ${records[user].disease||'N/A'}<br>
+        ${currentLang==='ne'?'प्रिस्क्रिप्सन':'Prescription'}: ${records[user].medicines||'N/A'}<br>
+        ${currentLang==='ne'?'सावधानी':'Precautions'}: ${records[user].precautions||'N/A'}
+      </div>`;
+    }
+  }
+  document.getElementById('allRecords').innerHTML=html;
+}
+
+// ---------------- Doctor Data Save ----------------
+function saveDoctorData(){
+  const patient = document.getElementById('patientName').value.trim();
+  const disease = document.getElementById('diseaseInput').value.trim();
+  const meds = document.getElementById('medicines').value.trim();
+  const precautions = document.getElementById('precautions').value.trim();
+  if(!patient) return alert(currentLang==='ne'?'रोगी नाम प्रविष्ट गर्नुहोस्':'Enter patient username');
+  let records=JSON.parse(localStorage.getItem('records')||'{}');
+  records[patient]=records[patient]||{};
+  records[patient].disease=disease||records[patient].disease;
+  records[patient].medicines=meds||records[patient].medicines;
+  records[patient].precautions=precautions||records[patient].precautions;
+  localStorage.setItem('records',JSON.stringify(records));
+  alert(currentLang==='ne'?'डेटा सुरक्षित':'Data saved');
+  showDoctorPatients();
+}
+</script>
+</body>
+</html>
